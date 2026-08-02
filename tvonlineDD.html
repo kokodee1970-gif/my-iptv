@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web IPTV Player (.m3u)</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #1f1f1f; padding: 12px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #333; }
+        input[type="text"] { flex: 1; min-width: 260px; padding: 10px 14px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #fff; outline: none; }
+        input[type="text"]:focus { border-color: #007bff; }
+        button, label.file-btn { background: #007bff; color: white; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; display: inline-block; }
+        button:hover, label.file-btn:hover { background: #0056b3; }
+        input[type="file"] { display: none; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .player-box { flex: 3; background: #000; display: flex; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; max-height: 100vh; }
+        .playlist-box { flex: 1; max-width: 350px; background: #181818; border-left: 1px solid #333; overflow-y: auto; }
+        .playlist-header { padding: 12px 15px; background: #222; font-weight: bold; border-bottom: 1px solid #333; position: sticky; top: 0; }
+        .channel-item { padding: 12px 15px; border-bottom: 1px solid #282828; cursor: pointer; transition: background 0.2s; word-break: break-word; }
+        .channel-item:hover { background: #282828; }
+        .channel-item.active { background: #007bff; color: white; font-weight: bold; }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .playlist-box { max-width: 100%; height: 250px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <input type="text" id="m3uUrl" placeholder="วางลิงก์ URL .m3u ออนไลน์ที่นี่...">
+        <button onclick="loadFromUrl()">โหลดจาก URL</button>
+        <label class="file-btn">
+            เลือกไฟล์ .m3u ในเครื่อง
+            <input type="file" id="m3uFile" accept=".m3u,.m3u8" onchange="loadFromFile(event)">
+        </label>
+    </header>
+
+    <div class="container">
+        <div class="player-box">
+            <video id="video" controls autoplay></video>
+        </div>
+        <div class="playlist-box">
+            <div class="playlist-header">รายการช่อง</div>
+            <div id="playlistContainer">
+                <div style="padding: 15px; color: #888;">กรุณาใส่ลิงก์หรืออัปโหลดไฟล์ .m3u เพื่อแสดงช่อง</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const playlistContainer = document.getElementById('playlistContainer');
+        let hls = null;
+
+        function parseM3U(content) {
+            const lines = content.split('\n');
+            const channels = [];
+            let currentTitle = '';
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('#EXTINF:')) {
+                    const commaIdx = line.indexOf(',');
+                    currentTitle = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : 'ไม่ระบุชื่อช่อง';
+                } else if (line && !line.startsWith('#')) {
+                    channels.push({
+                        title: currentTitle || `ช่อง ${channels.length + 1}`,
+                        url: line
+                    });
+                    currentTitle = '';
+                }
+            }
+            return channels;
+        }
+
+        function renderPlaylist(channels) {
+            playlistContainer.innerHTML = '';
+            if (channels.length === 0) {
+                playlistContainer.innerHTML = '<div style="padding: 15px; color: #888;">ไม่พบรายการช่องในไฟล์นี้</div>';
+                return;
+            }
+
+            channels.forEach((ch, idx) => {
+                const item = document.createElement('div');
+                item.className = 'channel-item';
+                item.innerText = `${idx + 1}. ${ch.title}`;
+                item.onclick = () => {
+                    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    playStream(ch.url);
+                };
+                playlistContainer.appendChild(item);
+            });
+        }
+
+        // ฟังก์ชันเล่นวิดีโอแบบอัปเดตระบบดักจับ Error
+        function playStream(url) {
+            if (Hls.isSupported()) {
+                if (hls) hls.destroy();
+                
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().catch(e => console.log("Auto-play blocked:", e));
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                alert("ไม่สามารถเล่นช่องนี้ได้: ลิงก์เสีย หรือติดข้อจำกัดความปลอดภัย (CORS)");
+                                hls.destroy();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.play();
+            }
+        }
+
+        async function loadFromUrl() {
+            const url = document.getElementById('m3uUrl').value.trim();
+            if (!url) return alert('กรุณาระบุ URL ของไฟล์ .m3u');
+
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลจาก URL นี้ได้');
+                const text = await res.text();
+                const channels = parseM3U(text);
+                renderPlaylist(channels);
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการโหลด URL: ' + err.message);
+            }
+        }
+
+        function loadFromFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const channels = parseM3U(evt.target.result);
+                renderPlaylist(channels);
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
