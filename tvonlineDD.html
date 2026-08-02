@@ -1,167 +1,330 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web IPTV Player (.m3u)</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #1f1f1f; padding: 12px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #333; }
-        input[type="text"] { flex: 1; min-width: 260px; padding: 10px 14px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #fff; outline: none; }
-        input[type="text"]:focus { border-color: #007bff; }
-        button, label.file-btn { background: #007bff; color: white; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; display: inline-block; }
-        button:hover, label.file-btn:hover { background: #0056b3; }
-        input[type="file"] { display: none; }
-        .container { display: flex; flex: 1; overflow: hidden; }
-        .player-box { flex: 3; background: #000; display: flex; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; max-height: 100vh; }
-        .playlist-box { flex: 1; max-width: 350px; background: #181818; border-left: 1px solid #333; overflow-y: auto; }
-        .playlist-header { padding: 12px 15px; background: #222; font-weight: bold; border-bottom: 1px solid #333; position: sticky; top: 0; }
-        .channel-item { padding: 12px 15px; border-bottom: 1px solid #282828; cursor: pointer; transition: background 0.2s; word-break: break-word; }
-        .channel-item:hover { background: #282828; }
-        .channel-item.active { background: #007bff; color: white; font-weight: bold; }
-        @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            .playlist-box { max-width: 100%; height: 250px; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Thai IPTV Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+    h1 { margin-bottom: 20px; font-size: 1.8rem; color: #38bdf8; }
+    .container { display: flex; flex-direction: column; width: 100%; max-width: 900px; gap: 20px; }
+    
+    .player-wrapper { position: relative; width: 100%; padding-top: 56.25%; background-color: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    
+    .control-box { display: flex; flex-direction: column; gap: 15px; background-color: #1e293b; padding: 18px; border-radius: 10px; border: 1px solid #334155; }
+    .upload-zone { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .file-label { background-color: #059669; color: white; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: background 0.2s; }
+    .file-label:hover { background-color: #047857; }
+    input[type="file"] { display: none; }
+    
+    .filter-zone { display: flex; align-items: center; gap: 10px; background-color: #0f172a; padding: 10px 14px; border-radius: 8px; border: 1px solid #334155; }
+    .filter-zone label { font-size: 0.9rem; color: #38bdf8; font-weight: bold; }
+    .filter-zone select { background-color: #1e293b; color: #fff; border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; outline: none; font-size: 0.9rem; flex: 1; cursor: pointer; }
+    
+    .channel-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .channel-btn { background-color: #1e293b; color: #e2e8f0; border: 2px solid #334155; border-radius: 8px; padding: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center; word-break: break-word; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s; }
+    .channel-btn:hover { background-color: #334155; border-color: #38bdf8; transform: translateY(-2px); }
+    .channel-btn.active { background-color: #0284c7; color: #ffffff; border-color: #38bdf8; }
+    .channel-btn img { width: 40px; height: 40px; object-fit: contain; }
+  </style>
 </head>
 <body>
 
-    <header>
-        <input type="text" id="m3uUrl" placeholder="วางลิงก์ URL .m3u ออนไลน์ที่นี่...">
-        <button onclick="loadFromUrl()">โหลดจาก URL</button>
-        <label class="file-btn">
-            เลือกไฟล์ .m3u ในเครื่อง
-            <input type="file" id="m3uFile" accept=".m3u,.m3u8" onchange="loadFromFile(event)">
-        </label>
-    </header>
+  <h1>📺 TV Online BY KOKO 📺 </h1>
 
-    <div class="container">
-        <div class="player-box">
-            <video id="video" controls autoplay></video>
-        </div>
-        <div class="playlist-box">
-            <div class="playlist-header">รายการช่อง</div>
-            <div id="playlistContainer">
-                <div style="padding: 15px; color: #888;">กรุณาใส่ลิงก์หรืออัปโหลดไฟล์ .m3u เพื่อแสดงช่อง</div>
-            </div>
-        </div>
+  <div class="container">
+    <div class="player-wrapper">
+      <video id="video" controls autoplay muted></video>
     </div>
 
-    <script>
-        const video = document.getElementById('video');
-        const playlistContainer = document.getElementById('playlistContainer');
-        let hls = null;
+    <div class="control-box">
+      <!-- อัปโหลดไฟล์เพื่อดึงรายการช่องเพิ่มเติม -->
+      <div class="upload-zone">
+        <label for="playlistFile" class="file-label">📁 เลือกไฟล์ M3U เพื่ออัปเดตช่อง</label>
+        <input type="file" id="playlistFile" accept=".m3u,.m3u8" onchange="handleFileUpload(event)">
+        <span id="fileNameDisplay" style="font-size: 0.85rem; color: #94a3b8;">โหลดรายการช่องจากระบบเรียบร้อย (86 ช่อง)</span>
+      </div>
 
-        function parseM3U(content) {
-            const lines = content.split('\n');
-            const channels = [];
-            let currentTitle = '';
+      <!-- แถบเลือกหมวดหมู่ -->
+      <div class="filter-zone">
+        <label for="categorySelect">🏷️ หมวดหมู่:</label>
+        <select id="categorySelect" onchange="filterChannels()">
+          <option value="ALL">ทั้งหมด (All Channels)</option>
+        </select>
+      </div>
+    </div>
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('#EXTINF:')) {
-                    const commaIdx = line.indexOf(',');
-                    currentTitle = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : 'ไม่ระบุชื่อช่อง';
-                } else if (line && !line.startsWith('#')) {
-                    channels.push({
-                        title: currentTitle || `ช่อง ${channels.length + 1}`,
-                        url: line
-                    });
-                    currentTitle = '';
-                }
-            }
-            return channels;
+    <div class="channel-list" id="channelList"></div>
+  </div>
+
+  <script>
+    // 🟢 รายการช่องทั้งหมดที่นำเข้าจาก M3U
+    let channels = [
+      { name: "CH 3 HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/3hd.png", url: "https://hls.iptv-th.workers.dev/live/127/playlist.m3u8" },
+      { name: "CH 5 HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/5hd.png", url: "https://hls.iptv-th.workers.dev/live/128/playlist.m3u8" },
+      { name: "CH 7 HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/7hd.png", url: "https://hls.iptv-th.workers.dev/live/129/playlist.m3u8" },
+      { name: "CH 8", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/8.png", url: "https://hls.iptv-th.workers.dev/live/131/playlist.m3u8" },
+      { name: "MCOT HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/mcot.png", url: "https://hls.iptv-th.workers.dev/live/133/playlist.m3u8" },
+      { name: "NBT", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/nbt.png", url: "https://hls.iptv-th.workers.dev/live/136/playlist.m3u8" },
+      { name: "Thai Rath HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/CAJw7MUj99UhevPkGY0kbT0ER33XBhethairath.png", url: "https://hls.iptv-th.workers.dev/live/141/playlist.m3u8" },
+      { name: "TNN 24", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/tnn.png", url: "https://hls.iptv-th.workers.dev/live/142/playlist.m3u8" },
+      { name: "ONE HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/one.png", url: "https://hls.iptv-th.workers.dev/live/138/playlist.m3u8" },
+      { name: "Thai PBS", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/thaipbs.png", url: "https://hls.iptv-th.workers.dev/live/140/playlist.m3u8" },
+      { name: "Top News", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/topnews.png", url: "https://hls.iptv-th.workers.dev/live/143/playlist.m3u8" },
+      { name: "PPTV HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/pptv.png", url: "https://hls.iptv-th.workers.dev/live/139/playlist.m3u8" },
+      { name: "Amarin TV HD", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/amarin.png", url: "https://hls.iptv-th.workers.dev/live/130/playlist.m3u8" },
+      { name: "Work Point TV", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/workpoint.png", url: "https://hls.iptv-th.workers.dev/live/146/playlist.m3u8" },
+      { name: "GMM 25", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/gmm.png", url: "https://hls.iptv-th.workers.dev/live/132/playlist.m3u8" },
+      { name: "MONO 29", group: "ดิจิตอลทีวี", logo: "https://s3.dooflixlive.com/assets/images/tv/digital/mono.png", url: "https://hls.iptv-th.workers.dev/live/134/playlist.m3u8" },
+      
+      { name: "Mono Max 1", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sYyiuEg5rNUช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/355/playlist.m3u8" },
+      { name: "Mono Max 2", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/Xg7D41W9nCAช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/358/playlist.m3u8" },
+      { name: "Mono Max 3", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/QoZvad55JuEช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/361/playlist.m3u8" },
+      { name: "Bein sport 1 Premium", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/0eAd5tyAknjLzQYJ130JXHprvGebTILZ2VuixrZ4ydkXWj2PNFPBFqG23HgU8eUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/323/playlist.m3u8" },
+      { name: "Bein sport 1 HD", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/bein1.png", url: "https://hls.iptv-th.workers.dev/live/51/playlist.m3u8" },
+      { name: "Bein sport 2 HD", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/bein2.png", url: "https://hls.iptv-th.workers.dev/live/52/playlist.m3u8" },
+      { name: "Bein sport 3 HD", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/bein3.png", url: "https://hls.iptv-th.workers.dev/live/53/playlist.m3u8" },
+      { name: "mutv", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/mutv.png", url: "https://hls.iptv-th.workers.dev/live/162/playlist.m3u8" },
+      { name: "LFC TV", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/LFC-TV.png", url: "https://hls.iptv-th.workers.dev/live/161/playlist.m3u8" },
+      { name: "Real Madrid TV", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/1rsDhCMds4Pช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/430/playlist.m3u8" },
+      { name: "Golf Channel HD", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/A47xxydQNoaUntitled-2.jpg", url: "https://hls.iptv-th.workers.dev/live/176/playlist.m3u8" },
+      { name: "PGA Tour", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/9WrcKirn4Urช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/540/playlist.m3u8" },
+      { name: "LPGA", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/2DeiGAp6jUfช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/541/playlist.m3u8" },
+      { name: "DP World TOUR", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/RyAK57buQ0fช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/542/playlist.m3u8" },
+      { name: "True Sport HD", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truesporthd.png", url: "https://hls.iptv-th.workers.dev/live/79/playlist.m3u8" },
+      { name: "True Sport HD 2", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truesporthd2.png", url: "https://hls.iptv-th.workers.dev/live/147/playlist.m3u8" },
+      { name: "True Sport HD 3", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truesporthd3.png", url: "https://hls.iptv-th.workers.dev/live/148/playlist.m3u8" },
+      { name: "True Sport HD 4", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truesporthd4.png", url: "https://hls.iptv-th.workers.dev/live/80/playlist.m3u8" },
+      { name: "True Sport 5", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truesporthd5.png", url: "https://hls.iptv-th.workers.dev/live/115/playlist.m3u8" },
+      { name: "True Sport 7", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truesporthd7.png", url: "https://hls.iptv-th.workers.dev/live/116/playlist.m3u8" },
+      { name: "True Tennis HD", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truetennis.png", url: "https://hls.iptv-th.workers.dev/live/77/playlist.m3u8" },
+      { name: "Spotv1", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/jFdF6E5g17N2vZ6iHex08eH11zHbZlyspotv.png", url: "https://hls.iptv-th.workers.dev/live/95/playlist.m3u8" },
+      { name: "Spotv2", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/MjjNBcRjUcAq8qMlGMLE5lD97u28Quzspotv2.png", url: "https://hls.iptv-th.workers.dev/live/96/playlist.m3u8" },
+      { name: "Premier HD3", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/sport/truepremiere3.png", url: "https://hls.iptv-th.workers.dev/live/124/playlist.m3u8" },
+      { name: "NFL 1", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/Rbms5GimDHszosBl7l9ZVZv4wwG9H1Wช่อง-Recovered.jpg", url: "https://hls.iptv-th.workers.dev/live/89/playlist.m3u8" },
+      { name: "NFL 2", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/89FSeDGMSQRijQFT2nj4X6wgQNzljSDช่อง-Recovered.jpg", url: "https://hls.iptv-th.workers.dev/live/415/playlist.m3u8" },
+      { name: "Fight Network", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/eio5tnTKwl4gl0l0meXVKfxDdnGrDUdช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/427/playlist.m3u8" },
+      { name: "One Lumpinee", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/iOrUIt3LGxXช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/352/playlist.m3u8" },
+      { name: "Euro Sport", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/v1XI4EwjicwHKignbBYmolcLAkHMMd4Euro-sport.png", url: "https://hls.iptv-th.workers.dev/live/45/playlist.m3u8" },
+      { name: "Mono Max 4", group: "กีฬา", logo: "https://s3.dooflixlive.com/assets/images/tv/NzRKXEx07Rzช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/364/playlist.m3u8" },
+
+      { name: "Sky Sports Main Event 1", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/MOuJODtQ5i0089TSeV4p0bKviltoeUM14.jpg", url: "https://hls.iptv-th.workers.dev/live/164/playlist.m3u8" },
+      { name: "Sky Sports Main Event 2", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/Gl0Mfj9gUj648o9fZm7IXsKAj5lp5x0ช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/165/playlist.m3u8" },
+      { name: "Red Bull TV", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/uHYJ136qZj1SEtn93MqfQrCmcdNxeMNredbull.png", url: "https://hls.iptv-th.workers.dev/live/93/playlist.m3u8" },
+      { name: "Fox sport 1 USA", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/Fox-sport-1-USA.png", url: "https://hls.iptv-th.workers.dev/live/157/playlist.m3u8" },
+      { name: "Fox sport 2 USA", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/Fox-sport-2-USA.png", url: "https://hls.iptv-th.workers.dev/live/159/playlist.m3u8" },
+      { name: "TNT Sports", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/oVnNj5ovkHBPn90HUMidcv0UH9NZkSqUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/151/playlist.m3u8" },
+      { name: "TNT Sports 2", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/KPrt7rZtVKTFNHM86slRod47KCZ4QFRUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/152/playlist.m3u8" },
+      { name: "TNT Sports 3", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/yumXVYLMNdaiOcclQy14rrDFlb4DJqrUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/153/playlist.m3u8" },
+      { name: "ESPN US", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/ESPN-US.png", url: "https://hls.iptv-th.workers.dev/live/155/playlist.m3u8" },
+      { name: "TNT Sports 4", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/CXMc2dLCjRriySvYYbchFYEezjrTgFsUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/154/playlist.m3u8" },
+      { name: "Sky sport F1", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/Sky-sport-F1.png", url: "https://hls.iptv-th.workers.dev/live/166/playlist.m3u8" },
+      { name: "Sky sport football", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/Sky-sport-football.png", url: "https://hls.iptv-th.workers.dev/live/167/playlist.m3u8" },
+      { name: "Sky Sport Golf", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/Sky-Sport-Golf.png", url: "https://hls.iptv-th.workers.dev/live/168/playlist.m3u8" },
+      { name: "Sky sport mix", group: "กีฬาต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/sport_foreign/Sky-sport-mix.png", url: "https://hls.iptv-th.workers.dev/live/169/playlist.m3u8" },
+
+      { name: "Fox News", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/0f2M4u6qJhzช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/421/playlist.m3u8" },
+      { name: "Fox Business", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/kuMhoXcZhUiช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/424/playlist.m3u8" },
+      { name: "Aljazeera", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/OfdIVgwT2z37JushUjrBKuHupl2ZuXhaljazeera.png", url: "https://hls.iptv-th.workers.dev/live/46/playlist.m3u8" },
+      { name: "Australia Network ABC", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/knNairwWVxGRGlyQKbkWnJmu6r64zcWUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/47/playlist.m3u8" },
+      { name: "BBC News", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/O3xeqWC09NE7nNz9Cwr9IGLZTqxjkwwbbcnews.png", url: "https://hls.iptv-th.workers.dev/live/50/playlist.m3u8" },
+      { name: "CNN", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/gtto7ncVZ9FpJdIMhLPdKDHKeu03eNEcnn.png", url: "https://hls.iptv-th.workers.dev/live/56/playlist.m3u8" },
+      { name: "CNBC", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/AhM2QQMguVntmxzQCGx4RUh5noGEa8sUntitled-1-Recovered.jpg", url: "https://hls.iptv-th.workers.dev/live/244/playlist.m3u8" },
+      { name: "NHK", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/KIRPvITufE2HQJxGUDutfgEzIZcrVwknhk.png", url: "https://hls.iptv-th.workers.dev/live/90/playlist.m3u8" },
+      { name: "RT - Breaking News", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/GG7O8vEuwZxUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/270/playlist.m3u8" },
+      { name: "CGTN", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/J8k35CRWSARUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/272/playlist.m3u8" },
+      { name: "CNA", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/vhXW2dqbDoVUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/273/playlist.m3u8" },
+      { name: "Euronews", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/20krEYgISTOUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/274/playlist.m3u8" },
+      { name: "DW", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/yAhmgFfF98uUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/275/playlist.m3u8" },
+      { name: "France 24", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/F7geClvzmPKUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/276/playlist.m3u8" },
+      { name: "News1", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/udUv8r8BboRUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/277/playlist.m3u8" },
+      { name: "HLN - CNN", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/LFSdjTsYgf3Untitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/282/playlist.m3u8" },
+      { name: "hls", group: "ข่าวต่างประเทศ", logo: "https://s3.dooflixlive.com/assets/images/tv/uI7QEkW0psShls.webp", url: "https://hls.iptv-th.workers.dev/live/448/playlist.m3u8" },
+
+      { name: "Rock Entertainment", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/yyXcdVEDUhL8YOcH9hmvHHp4JSq4rH0Untitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/32/playlist.m3u8" },
+      { name: "ROCK Action", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/cPv75zm9B3WiGtFrAjl2U1AInA4IpoAUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/33/playlist.m3u8" },
+      { name: "Fashion one", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/entertain/fasionone.png", url: "https://hls.iptv-th.workers.dev/live/35/playlist.m3u8" },
+      { name: "Food Network Asia", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/IbbwhGuE0fIO2qvs0QVIHnNplrHsmG5Untitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/36/playlist.m3u8" },
+      { name: "Asian food network AFN", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/2ViJvwI2jKQyt3wmFPZnGSV8P8mYaQbUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/38/playlist.m3u8" },
+      { name: "Liifetime HD", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/entertain/lifetimehd.png", url: "https://hls.iptv-th.workers.dev/live/40/playlist.m3u8" },
+      { name: "BBC Lifestyle", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/qwdjcyFPMEcB8ZZ2i6vHIc4uZW3VnC5download_(1).png", url: "https://hls.iptv-th.workers.dev/live/49/playlist.m3u8" },
+      { name: "Arirang", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/wVCVw7L69dRUntitled-1-Recovered.jpg", url: "https://hls.iptv-th.workers.dev/live/245/playlist.m3u8" },
+      { name: "CCTV 4", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/RDNUpjevvyvJFFLteyFNsKl55YCGfrvUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/271/playlist.m3u8" },
+      { name: "KBS World", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/3ko8ZsA3hGfMQ662DxEzMRxRudiouC9kbs_(1).png", url: "https://hls.iptv-th.workers.dev/live/83/playlist.m3u8" },
+      { name: "True Xzyte", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/entertain/truexzyte.png", url: "https://hls.iptv-th.workers.dev/live/121/playlist.m3u8" },
+      { name: "TechStorm TV", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/slJFS0oWHIpUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/280/playlist.m3u8" },
+      { name: "Mono Music", group: "บันเทิง", logo: "https://s3.dooflixlive.com/assets/images/tv/fUH4QXVIvl6ช่อง.jpg", url: "https://hls.iptv-th.workers.dev/live/343/playlist.m3u8" },
+
+      { name: "HBO HD Thai", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/hbo.png", url: "https://hls.iptv-th.workers.dev/live/73/playlist.m3u8" },
+      { name: "HBO Hit", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/hbohits.png", url: "https://hls.iptv-th.workers.dev/live/71/playlist.m3u8" },
+      { name: "HBO Signature", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/hbosig.png", url: "https://hls.iptv-th.workers.dev/live/72/playlist.m3u8" },
+      { name: "HBO Family", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/hbofamily.png", url: "https://hls.iptv-th.workers.dev/live/65/playlist.m3u8" },
+      { name: "AXN HD", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/entertain/axn.png", url: "https://hls.iptv-th.workers.dev/live/68/playlist.m3u8" },
+      { name: "Dreamwork", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/ePP8UaRIcYsmjtmNcbGrN9pXvcChPTZdreamwork.png", url: "https://hls.iptv-th.workers.dev/live/59/playlist.m3u8" },
+      { name: "Cinemax", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/cinemax.png", url: "https://hls.iptv-th.workers.dev/live/62/playlist.m3u8" },
+      { name: "Warner TV", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/wbtv.png", url: "https://hls.iptv-th.workers.dev/live/120/playlist.m3u8" },
+      { name: "True Movie Hits", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/JP8JpTXuXBScqgUTdSv29pfWuoBGaH0moviehits_(1).png", url: "https://hls.iptv-th.workers.dev/live/86/playlist.m3u8" },
+      { name: "True Film HD", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/h2vv1IuK5HG1NLi6SGFJh248qYS8JIetruefilmhd.png", url: "https://hls.iptv-th.workers.dev/live/101/playlist.m3u8" },
+      { name: "True Film HD2", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/y3ezDIC5r6qtdqjzTkdIbvsFhGbuK8struefilmhd2_(1).png", url: "https://hls.iptv-th.workers.dev/live/102/playlist.m3u8" },
+      { name: "True Thai Film", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/movie/truethaifilm.png", url: "https://hls.iptv-th.workers.dev/live/117/playlist.m3u8" },
+      { name: "True Asian More", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/XaSIO94qGjzo3e5EF94PKAXkHvrecl0trueasianmore_(1).png", url: "https://hls.iptv-th.workers.dev/live/103/playlist.m3u8" },
+      { name: "True Film Asia", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/oaAofV5K9iC2NrblejU5gX645lMBHjftruefilmasia.png", url: "https://hls.iptv-th.workers.dev/live/106/playlist.m3u8" },
+      { name: "True Series", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/lCrOElry5MTJ3aGNq3GN8UlIRQ7LS4rtrueseries.png", url: "https://hls.iptv-th.workers.dev/live/112/playlist.m3u8" },
+      { name: "3BB Asia", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/CgLZMVLSZKNMMeGb1H5n2iiN37ODTzl3-logo-3BB-Asian-ช่องรายการ_370x180_(1).jpeg", url: "https://hls.iptv-th.workers.dev/live/44/playlist.m3u8" },
+      { name: "GEM", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/sbLMUWTMUljJyAYYGs1oMA5qgbFuCKNgem.jpeg", url: "https://hls.iptv-th.workers.dev/live/37/playlist.m3u8" },
+      { name: "Celestial Classic Movies", group: "ภาพยนตร์", logo: "https://s3.dooflixlive.com/assets/images/tv/entertain/ccm.png", url: "https://hls.iptv-th.workers.dev/live/34/playlist.m3u8" },
+
+      { name: "AniPlus", group: "การ์ตูน", logo: "https://s3.dooflixlive.com/assets/images/tv/TTIFlFQ8xRhMER7ANQbCblXgC85tebNcartoonito.png", url: "https://hls.iptv-th.workers.dev/live/31/playlist.m3u8" },
+      { name: "Cartoon Network", group: "การ์ตูน", logo: "https://s3.dooflixlive.com/assets/images/tv/cartoon/cn.png", url: "https://hls.iptv-th.workers.dev/live/54/playlist.m3u8" },
+      { name: "Nick Kids", group: "การ์ตูน", logo: "https://s3.dooflixlive.com/assets/images/tv/6fB249brsMvtDLJxoeJLshqd0FaWAqJUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/91/playlist.m3u8" },
+      { name: "True Spark Play", group: "การ์ตูน", logo: "https://s3.dooflixlive.com/assets/images/tv/cartoon/truesparkplay.png", url: "https://hls.iptv-th.workers.dev/live/114/playlist.m3u8" },
+      { name: "Boomerang", group: "การ์ตูน", logo: "https://s3.dooflixlive.com/assets/images/tv/7qI4lXeWpRMUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/219/playlist.m3u8" },
+      { name: "Nick Jr", group: "การ์ตูน", logo: "https://s3.dooflixlive.com/assets/images/tv/70RP1g9xfXtUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/292/playlist.m3u8" },
+
+      { name: "Discovery Channel", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/documentary/discovery.png", url: "https://hls.iptv-th.workers.dev/live/69/playlist.m3u8" },
+      { name: "History HD", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/documentary/history.png", url: "https://hls.iptv-th.workers.dev/live/74/playlist.m3u8" },
+      { name: "Animal show", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/dbLFi1PM8pqrH4pVCbR3HxZmYdQQP0z1245.jpg", url: "https://hls.iptv-th.workers.dev/live/329/playlist.m3u8" },
+      { name: "Animal Planet", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/luEFfyPlScmkXkYpGjpUc2IGyaDmMSWUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/66/playlist.m3u8" },
+      { name: "Discovery Asia", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/YLUgvxqoWIjDt2txblBTAHYXFZ6xnMPdiscoveryasia.png", url: "https://hls.iptv-th.workers.dev/live/57/playlist.m3u8" },
+      { name: "สำรวจโลก", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/cQiU4gTwIa9samrujlok.png", url: "https://hls.iptv-th.workers.dev/live/94/playlist.m3u8" },
+      { name: "Thainess", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/3QMYaUybddn1224556.jpg", url: "https://hls.iptv-th.workers.dev/live/332/playlist.m3u8" },
+      { name: "Thai ของดีประเทศไทย", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/sMqTXBdzOao123.jpg", url: "https://hls.iptv-th.workers.dev/live/335/playlist.m3u8" },
+      { name: "True Explore Life", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/documentary/trueexplorerlife.png", url: "https://hls.iptv-th.workers.dev/live/110/playlist.m3u8" },
+      { name: "True Explore SCI", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/documentary/trueexplorersci.png", url: "https://hls.iptv-th.workers.dev/live/111/playlist.m3u8" },
+      { name: "Love Nature 4K", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/vuTpeJWnlrR6q6k2IIdEOQlUQWBhUkjlove4knature.png", url: "https://hls.iptv-th.workers.dev/live/41/playlist.m3u8" },
+      { name: "True Explore Wild", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/documentary/trueexplorerwild.png", url: "https://hls.iptv-th.workers.dev/live/118/playlist.m3u8" },
+      { name: "RT Documentary", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/vZ1unU6TY8EUntitled-1.jpg", url: "https://hls.iptv-th.workers.dev/live/269/playlist.m3u8" },
+      { name: "TLC", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/documentary/tlc.png", url: "https://hls.iptv-th.workers.dev/live/78/playlist.m3u8" },
+      { name: "CI", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/fHbwcuPs4KHci.png", url: "https://hls.iptv-th.workers.dev/live/55/playlist.m3u8" },
+      { name: "MySci", group: "สารคดี", logo: "https://s3.dooflixlive.com/assets/images/tv/uYjgVMBjGBFUntitled-2.jpg", url: "https://hls.iptv-th.workers.dev/live/211/playlist.m3u8" }
+    ];
+
+    const video = document.getElementById('video');
+    const channelListContainer = document.getElementById('channelList');
+    const categorySelect = document.getElementById('categorySelect');
+    let hls = null;
+
+    function playChannel(url, element) {
+      document.querySelectorAll('.channel-btn').forEach(btn => btn.classList.remove('active'));
+      if (element) element.classList.add('active');
+
+      if (Hls.isSupported()) {
+        if (hls) hls.destroy();
+        hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
+      }
+    }
+
+    function updateCategoryDropdown() {
+      const categories = new Set();
+      channels.forEach(ch => categories.add(ch.group || 'ทั่วไป'));
+
+      categorySelect.innerHTML = '<option value="ALL">ทั้งหมด (All Channels)</option>';
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.innerText = cat;
+        categorySelect.appendChild(option);
+      });
+    }
+
+    function filterChannels() {
+      const selectedCategory = categorySelect.value;
+      const filtered = (selectedCategory === 'ALL') 
+        ? channels 
+        : channels.filter(ch => (ch.group || 'ทั่วไป') === selectedCategory);
+      
+      renderChannels(filtered);
+    }
+
+    function renderChannels(channelArrayToRender = channels) {
+      channelListContainer.innerHTML = '';
+      if (channelArrayToRender.length === 0) {
+        channelListContainer.innerHTML = '<p style="color:#94a3b8;">ไม่พบรายการช่องในหมวดหมู่นี้</p>';
+        return;
+      }
+
+      channelArrayToRender.forEach((ch, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'channel-btn';
+        
+        let logoHtml = ch.logo ? `<img src="${ch.logo}" alt="${ch.name}" onerror="this.style.display='none'">` : '';
+        btn.innerHTML = `${logoHtml}<span>${ch.name}</span>`;
+        
+        btn.onclick = () => playChannel(ch.url, btn);
+        channelListContainer.appendChild(btn);
+
+        if (index === 0) playChannel(ch.url, btn);
+      });
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      document.getElementById('fileNameDisplay').innerText = 'อัปเดตช่องจากไฟล์: ' + file.name;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        parseM3uPlaylist(content);
+      };
+      
+      reader.readAsText(file);
+    }
+
+    function parseM3uPlaylist(data) {
+      const lines = data.split('\n');
+      const parsedChannels = [];
+      let currentName = '';
+      let currentGroup = 'ทั่วไป';
+      let currentLogo = '';
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        
+        if (line.startsWith('#EXTINF:')) {
+          const groupMatch = line.match(/group-title="([^"]+)"/i);
+          currentGroup = groupMatch ? groupMatch[1] : 'ทั่วไป';
+
+          const logoMatch = line.match(/tvg-logo="([^"]+)"/i);
+          currentLogo = logoMatch ? logoMatch[1] : '';
+
+          const commaIndex = line.lastIndexOf(',');
+          currentName = (commaIndex !== -1) ? line.substring(commaIndex + 1).trim() : 'ช่องไม่มีชื่อ';
+        } else if (line.length > 0 && !line.startsWith('#')) {
+          parsedChannels.push({ 
+            name: currentName || `ช่องที่ ${parsedChannels.length + 1}`, 
+            group: currentGroup,
+            logo: currentLogo,
+            url: line 
+          });
+          currentName = '';
+          currentGroup = 'ทั่วไป';
+          currentLogo = '';
         }
+      }
 
-        function renderPlaylist(channels) {
-            playlistContainer.innerHTML = '';
-            if (channels.length === 0) {
-                playlistContainer.innerHTML = '<div style="padding: 15px; color: #888;">ไม่พบรายการช่องในไฟล์นี้</div>';
-                return;
-            }
+      if (parsedChannels.length > 0) {
+        channels = parsedChannels;
+        updateCategoryDropdown();
+        renderChannels();
+      } else {
+        alert('ไม่พบรายการช่องสตรีมมิ่งในไฟล์นี้');
+      }
+    }
 
-            channels.forEach((ch, idx) => {
-                const item = document.createElement('div');
-                item.className = 'channel-item';
-                item.innerText = `${idx + 1}. ${ch.title}`;
-                item.onclick = () => {
-                    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
-                    item.classList.add('active');
-                    playStream(ch.url);
-                };
-                playlistContainer.appendChild(item);
-            });
-        }
-
-        // ฟังก์ชันเล่นวิดีโอแบบอัปเดตระบบดักจับ Error
-        function playStream(url) {
-            if (Hls.isSupported()) {
-                if (hls) hls.destroy();
-                
-                hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                });
-                
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play().catch(e => console.log("Auto-play blocked:", e));
-                });
-
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                alert("ไม่สามารถเล่นช่องนี้ได้: ลิงก์เสีย หรือติดข้อจำกัดความปลอดภัย (CORS)");
-                                hls.destroy();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                hls.recoverMediaError();
-                                break;
-                            default:
-                                hls.destroy();
-                                break;
-                        }
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url;
-                video.play();
-            }
-        }
-
-        async function loadFromUrl() {
-            const url = document.getElementById('m3uUrl').value.trim();
-            if (!url) return alert('กรุณาระบุ URL ของไฟล์ .m3u');
-
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลจาก URL นี้ได้');
-                const text = await res.text();
-                const channels = parseM3U(text);
-                renderPlaylist(channels);
-            } catch (err) {
-                alert('เกิดข้อผิดพลาดในการโหลด URL: ' + err.message);
-            }
-        }
-
-        function loadFromFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                const channels = parseM3U(evt.target.result);
-                renderPlaylist(channels);
-            };
-            reader.readAsText(file);
-        }
-    </script>
+    window.onload = () => {
+      updateCategoryDropdown();
+      renderChannels();
+    };
+  </script>
 </body>
 </html>
