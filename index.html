@@ -3,242 +3,708 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web IPTV Player (.m3u)</title>
+    <meta name="referrer" content="no-referrer">
+    <title>Custom M3U IPTV Web Player</title>
+    <!-- HLS.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #1f1f1f; padding: 12px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #333; }
-        input[type="text"] { flex: 1; min-width: 260px; padding: 10px 14px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #fff; outline: none; }
-        input[type="text"]:focus { border-color: #007bff; }
-        button, label.file-btn { background: #007bff; color: white; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; display: inline-block; }
-        button:hover, label.file-btn:hover { background: #0056b3; }
-        input[type="file"] { display: none; }
-        
-        .container { display: flex; flex: 1; overflow: hidden; }
-        .player-box { flex: 3; background: #000; display: flex; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; max-height: 100vh; }
-        
-        /* รายการช่อง และแท็บ */
-        .playlist-box { flex: 1; max-width: 350px; background: #181818; border-left: 1px solid #333; display: flex; flex-direction: column; }
-        .tab-buttons { display: flex; border-bottom: 1px solid #333; background: #222; }
-        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #888; cursor: pointer; border-bottom: 2px solid transparent; border-radius: 0; font-weight: bold; }
-        .tab-btn.active { color: #fff; border-bottom-color: #007bff; background: #181818; }
-        
-        #playlistContainer { flex: 1; overflow-y: auto; }
-        .channel-item { padding: 12px 15px; border-bottom: 1px solid #282828; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .channel-item:hover { background: #282828; }
-        .channel-item.active { background: #007bff; color: white; font-weight: bold; }
-        .channel-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        /* ปุ่มดาวช่องโปรด */
-        .fav-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 5px; color: #666; transition: transform 0.1s; }
-        .fav-btn:hover { transform: scale(1.2); }
-        .fav-btn.is-fav { color: #ffca28; }
-        
+        :root {
+            --bg-primary: #121214;
+            --bg-secondary: #1a1a1e;
+            --bg-card: #24242a;
+            --accent: #e50914;
+            --accent-hover: #ff1e27;
+            --fav-color: #ff3b30;
+            --text-main: #ffffff;
+            --text-sub: #a0a0a0;
+            --border: #33333b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar UI */
+        .sidebar {
+            width: 420px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* M3U Input Bar */
+        .url-box {
+            display: flex;
+            gap: 6px;
+        }
+
+        .url-box input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.82rem;
+        }
+
+        .url-box button {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .url-box button:hover {
+            background: var(--accent-hover);
+        }
+
+        .reset-link-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-align: right;
+            text-decoration: underline;
+            align-self: flex-end;
+            margin-top: -4px;
+        }
+
+        .reset-link-btn:hover {
+            color: var(--text-main);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 9px 15px 9px 38px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-sub);
+        }
+
+        .category-select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .channel-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 6px;
+            background: transparent;
+            position: relative;
+        }
+
+        .channel-item:hover {
+            background-color: var(--bg-card);
+        }
+
+        .channel-item.active {
+            background-color: var(--accent);
+            color: #fff;
+        }
+
+        .channel-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: contain;
+            background-color: #000;
+            padding: 2px;
+        }
+
+        .channel-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .channel-title {
+            font-size: 0.88rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .channel-group {
+            font-size: 0.73rem;
+            color: var(--text-sub);
+        }
+
+        .channel-item.active .channel-group {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .fav-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .fav-btn:hover {
+            transform: scale(1.15);
+        }
+
+        .fav-btn.active {
+            color: var(--fav-color);
+        }
+
+        /* Player Section */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #000;
+            position: relative;
+        }
+
+        .video-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            max-height: 100vh;
+            outline: none;
+        }
+
+        .player-info {
+            padding: 15px 25px;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .current-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: contain;
+            display: none;
+            background: #000;
+        }
+
+        .current-title-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .current-title {
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .player-fav-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: none;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .player-fav-btn:hover {
+            transform: scale(1.15);
+        }
+
+        .player-fav-btn.active {
+            color: var(--fav-color);
+        }
+
+        .status-badge {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 20;
+            font-size: 0.95rem;
+            border: 1px solid var(--border);
+        }
+
+        /* Responsive Layout */
         @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            .playlist-box { max-width: 100%; height: 280px; }
+            body {
+                flex-direction: column-reverse;
+            }
+            .sidebar {
+                width: 100%;
+                height: 55vh;
+            }
+            .main-content {
+                height: 45vh;
+            }
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <input type="text" id="m3uUrl" placeholder="วางลิงก์ URL .m3u ออนไลน์ที่นี่...">
-        <button onclick="loadFromUrl()">โหลดจาก URL</button>
-        <label class="file-btn">
-            เลือกไฟล์ .m3u ในเครื่อง
-            <input type="file" id="m3uFile" accept=".m3u,.m3u8" onchange="loadFromFile(event)">
-        </label>
-    </header>
-
-    <div class="container">
-        <div class="player-box">
-            <video id="video" controls autoplay></video>
-        </div>
-        
-        <div class="playlist-box">
-            <!-- แท็บสลับช่องทั้งหมด vs ช่องโปรด -->
-            <div class="tab-buttons">
-                <button class="tab-btn active" id="tabAll" onclick="switchTab('all')">ช่องทั้งหมด</button>
-                <button class="tab-btn" id="tabFav" onclick="switchTab('fav')">⭐ ช่องโปรด</button>
-            </div>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="header">
+            <h1><i class="fa-solid fa-play"></i> Custom IPTV Player</h1>
             
-            <div id="playlistContainer">
-                <div style="padding: 15px; color: #888;">กรุณาใส่ลิงก์หรืออัปโหลดไฟล์ .m3u เพื่อแสดงช่อง</div>
+            <!-- URL Input Area -->
+            <div class="url-box">
+                <input type="text" id="m3uUrlInput" placeholder="กรอก M3U / M3U8 URL ของคุณที่นี่...">
+                <button id="loadUrlBtn"><i class="fa-solid fa-download"></i> โหลด</button>
+            </div>
+            <button class="reset-link-btn" id="resetDefaultBtn">ใช้ลิงก์เริ่มต้น (iptv-org)</button>
+
+            <!-- Search Box -->
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="ค้นหาชื่อช่อง หรือประเทศ...">
+            </div>
+
+            <!-- Category Filter -->
+            <select id="categorySelect" class="category-select">
+                <option value="ALL">กำลังโหลดหมวดหมู่...</option>
+            </select>
+        </div>
+
+        <div class="channel-list" id="channelList">
+            <!-- รายชื่อช่องจะสร้างขึ้นที่นี่ -->
+        </div>
+    </div>
+
+    <!-- Main Player Area -->
+    <div class="main-content">
+        <div class="video-container">
+            <div class="status-badge" id="statusMessage">
+                <i class="fa-solid fa-spinner fa-spin"></i> กำลังดึงข้อมูลช่องรายการ...
+            </div>
+            <video id="videoPlayer" controls autoplay></video>
+        </div>
+        <div class="player-info">
+            <img id="currentLogo" class="current-logo" src="" alt="Logo">
+            <div class="current-title-container">
+                <div class="current-title" id="currentTitle">กรุณาเลือกช่องรายการเพื่อรับชม</div>
+                <button class="player-fav-btn" id="playerFavBtn" title="บันทึกช่องโปรด">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        const video = document.getElementById('video');
-        const playlistContainer = document.getElementById('playlistContainer');
-        
+        const DEFAULT_M3U_URL = "https://iptv-org.github.io/iptv/index.m3u";
+        const CORS_PROXY = "https://corsproxy.io/?";
+
+        let channels = [];
+        let categories = new Set();
+        let favorites = new Set(JSON.parse(localStorage.getItem('iptv_favorites') || '[]'));
+        let currentPlayingChannel = null;
         let hls = null;
-        let allChannels = [];
-        let favorites = JSON.parse(localStorage.getItem('iptv_favorites')) || []; // ดึงข้อมูลช่องโปรดจาก localStorage
-        let currentTab = 'all'; // 'all' หรือ 'fav'
-        let currentPlayingUrl = '';
 
-        // 1. ฟังก์ชันแยกแยะไฟล์ M3U
-        function parseM3U(content) {
-            const lines = content.split('\n');
-            const channels = [];
-            let currentTitle = '';
+        const video = document.getElementById('videoPlayer');
+        const channelListEl = document.getElementById('channelList');
+        const searchInput = document.getElementById('searchInput');
+        const categorySelect = document.getElementById('categorySelect');
+        const currentTitleEl = document.getElementById('currentTitle');
+        const currentLogoEl = document.getElementById('currentLogo');
+        const playerFavBtn = document.getElementById('playerFavBtn');
+        const statusMessageEl = document.getElementById('statusMessage');
+        const m3uUrlInput = document.getElementById('m3uUrlInput');
+        const loadUrlBtn = document.getElementById('loadUrlBtn');
+        const resetDefaultBtn = document.getElementById('resetDefaultBtn');
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
+        // Fetch M3U Playlist
+        async function fetchPlaylist(targetUrl) {
+            statusMessageEl.style.display = 'flex';
+            statusMessageEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังดึงข้อมูลช่องรายการ...`;
+
+            try {
+                let response;
+                try {
+                    response = await fetch(targetUrl);
+                    if (!response.ok) throw new Error();
+                } catch (e) {
+                    response = await fetch(CORS_PROXY + encodeURIComponent(targetUrl));
+                }
+
+                const data = await response.text();
+                
+                // Reset State
+                channels = [];
+                categories.clear();
+                
+                parseM3U(data);
+                
+                // บันทึก URL ล่าสุดลง LocalStorage
+                localStorage.setItem('iptv_last_url', targetUrl);
+                
+                statusMessageEl.style.display = 'none';
+                renderCategories();
+                renderChannels();
+            } catch (err) {
+                console.error(err);
+                statusMessageEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#e50914;"></i> โหลด Playlist ไม่สำเร็จ โปรดตรวจสอบ URL หรือการเชื่อมต่ออินเทอร์เน็ต`;
+            }
+        }
+
+        // Parse M3U Text
+        function parseM3U(m3uText) {
+            const lines = m3uText.split('\n');
+            let currentChannel = null;
+
+            for (let line of lines) {
+                line = line.trim();
                 if (line.startsWith('#EXTINF:')) {
-                    const commaIdx = line.indexOf(',');
-                    currentTitle = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : 'ไม่ระบุชื่อช่อง';
-                } else if (line && !line.startsWith('#')) {
-                    channels.push({
-                        title: currentTitle || `ช่อง ${channels.length + 1}`,
-                        url: line
-                    });
-                    currentTitle = '';
+                    currentChannel = {};
+                    
+                    // Extract Logo
+                    const logoMatch = line.match(/tvg-logo="([^"]+)"/);
+                    if (logoMatch) currentChannel.logo = logoMatch[1];
+
+                    // Extract Category / Group
+                    const groupMatch = line.match(/group-title="([^"]+)"/);
+                    if (groupMatch) {
+                        currentChannel.group = groupMatch[1];
+                        categories.add(groupMatch[1]);
+                    } else {
+                        currentChannel.group = "General";
+                    }
+
+                    // Extract Channel Name
+                    const nameParts = line.split(',');
+                    if (nameParts.length > 1) {
+                        currentChannel.name = nameParts[nameParts.length - 1].trim();
+                    } else {
+                        currentChannel.name = "Unnamed Channel";
+                    }
+                } else if (line.startsWith('http://') || line.startsWith('https://')) {
+                    if (currentChannel) {
+                        currentChannel.url = line;
+                        channels.push(currentChannel);
+                        currentChannel = null;
+                    }
                 }
             }
-            return channels;
         }
 
-        // 2. ฟังก์ชันสลับแท็บ (ช่องทั้งหมด / ช่องโปรด)
-        function switchTab(tab) {
-            currentTab = tab;
-            document.getElementById('tabAll').classList.toggle('active', tab === 'all');
-            document.getElementById('tabFav').classList.toggle('active', tab === 'fav');
-            renderPlaylist();
+        // Save Favorites to LocalStorage
+        function saveFavorites() {
+            localStorage.setItem('iptv_favorites', JSON.stringify(Array.from(favorites)));
         }
 
-        // 3. ฟังก์ชัน เพิ่ม/ลบ ช่องโปรด
-        function toggleFavorite(event, ch) {
-            event.stopPropagation(); // ป้องกันไม่ให้คลิกดาวแล้วกลายเป็นการเล่นวิดีโอ
-            
-            const index = favorites.findIndex(f => f.url === ch.url);
-            if (index > -1) {
-                favorites.splice(index, 1); // ถ้ามีอยู่แล้วให้ลบออก
+        // Toggle Favorite Item
+        function toggleFavorite(url, event) {
+            if (event) event.stopPropagation();
+
+            if (favorites.has(url)) {
+                favorites.delete(url);
             } else {
-                favorites.push(ch); // ถ้ายังไม่มีให้เพิ่ม
+                favorites.add(url);
             }
+            saveFavorites();
             
-            // บันทึกลง localStorage
-            localStorage.setItem('iptv_favorites', JSON.stringify(favorites));
-            renderPlaylist();
+            renderChannels(searchInput.value, categorySelect.value);
+            updatePlayerFavBtn();
         }
 
-        // 4. ฟังก์ชันแสดงรายการช่อง
-        function renderPlaylist() {
-            playlistContainer.innerHTML = '';
+        // Render Dropdown Category Options
+        function renderCategories() {
+            categorySelect.innerHTML = '';
             
-            // เลือกรายการที่จะแสดงผลตามแท็บที่เปิดอยู่
-            const displayList = currentTab === 'all' ? allChannels : favorites;
+            const favOption = document.createElement('option');
+            favOption.value = 'FAVORITES';
+            favOption.textContent = `⭐ ช่องโปรดของฉัน (${favorites.size})`;
+            categorySelect.appendChild(favOption);
 
-            if (displayList.length === 0) {
-                const msg = currentTab === 'all' 
-                    ? 'ไม่พบรายการช่องในไฟล์นี้' 
-                    : 'ยังไม่มีช่องโปรด (กดรูป ⭐ เพื่อบันทึกช่อง)';
-                playlistContainer.innerHTML = `<div style="padding: 15px; color: #888;">${msg}</div>`;
-                return;
-            }
+            const allOption = document.createElement('option');
+            allOption.value = 'ALL';
+            allOption.textContent = 'แสดงทุกหมวดหมู่ / ประเทศทั้งหมด';
+            categorySelect.appendChild(allOption);
 
-            displayList.forEach((ch, idx) => {
-                const isFav = favorites.some(f => f.url === ch.url);
-                const isPlaying = ch.url === currentPlayingUrl;
-
-                const item = document.createElement('div');
-                item.className = `channel-item ${isPlaying ? 'active' : ''}`;
-                
-                item.innerHTML = `
-                    <span class="channel-title" title="${ch.title}">${idx + 1}. ${ch.title}</span>
-                    <button class="fav-btn ${isFav ? 'is-fav' : ''}" title="${isFav ? 'ลบออกจากช่องโปรด' : 'เพิ่มในช่องโปรด'}">
-                        ${isFav ? '★' : '☆'}
-                    </button>
-                `;
-
-                // คลิกที่แถบเพื่อเล่นช่อง
-                item.onclick = () => {
-                    currentPlayingUrl = ch.url;
-                    renderPlaylist();
-                    playStream(ch.url);
-                };
-
-                // คลิกที่ปุ่มดาวเพื่อ เพิ่ม/ลบ ช่องโปรด
-                const favBtn = item.querySelector('.fav-btn');
-                favBtn.onclick = (e) => toggleFavorite(e, ch);
-
-                playlistContainer.appendChild(item);
+            Array.from(categories).sort().forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                categorySelect.appendChild(opt);
             });
         }
 
-        // 5. ฟังก์ชันเล่นวิดีโอ
-        function playStream(url) {
-            const myProxy = "https://my-cors-proxy.ชื่อคุณ.workers.dev/?url="; // ใส่ Worker URL ของคุณที่นี่
-            const proxiedUrl = url.startsWith('http') ? myProxy + encodeURIComponent(url) : url;
+        // Render Channel List
+        function renderChannels(filterText = '', filterCategory = 'ALL') {
+            channelListEl.innerHTML = '';
+            
+            if (categorySelect.options.length > 0) {
+                categorySelect.options[0].textContent = `⭐ ช่องโปรดของฉัน (${favorites.size})`;
+            }
 
-            if (Hls.isSupported()) {
-                if (hls) hls.destroy();
-                hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+            const filtered = channels.filter(ch => {
+                const matchesSearch = ch.name.toLowerCase().includes(filterText.toLowerCase()) || 
+                                     ch.group.toLowerCase().includes(filterText.toLowerCase());
                 
-                hls.loadSource(proxiedUrl);
-                hls.attachMedia(video);
+                let matchesCategory = false;
+                if (filterCategory === 'FAVORITES') {
+                    matchesCategory = favorites.has(ch.url);
+                } else if (filterCategory === 'ALL') {
+                    matchesCategory = true;
+                } else {
+                    matchesCategory = (ch.group === filterCategory);
+                }
+
+                return matchesSearch && matchesCategory;
+            });
+
+            if (filtered.length === 0) {
+                const msg = filterCategory === 'FAVORITES' 
+                    ? 'ยังไม่มีช่องรายการโปรด (กดไอคอน ❤️ เพื่อบันทึกช่องโปรด)' 
+                    : 'ไม่พบช่องรายการที่ค้นหา';
+                channelListEl.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-sub);">${msg}</div>`;
+                return;
+            }
+
+            const limit = 200;
+            const displayChannels = filtered.slice(0, limit);
+
+            displayChannels.forEach((ch) => {
+                const isFav = favorites.has(ch.url);
+                const item = document.createElement('div');
+                item.className = `channel-item ${currentPlayingChannel && currentPlayingChannel.url === ch.url ? 'active' : ''}`;
                 
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play().catch(e => console.log("Auto-play blocked:", e));
+                item.innerHTML = `
+                    <img class="channel-logo" src="${ch.logo || 'https://via.placeholder.com/40'}" onerror="this.src='https://via.placeholder.com/40'">
+                    <div class="channel-info">
+                        <div class="channel-title">${ch.name}</div>
+                        <div class="channel-group">${ch.group}</div>
+                    </div>
+                    <button class="fav-btn ${isFav ? 'active' : ''}" title="${isFav ? 'ลบออกจากช่องโปรด' : 'บันทึกเป็นช่องโปรด'}">
+                        <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+                `;
+
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    playStream(ch);
                 });
 
-                hls.on(Hls.Events.ERROR, (event, data) => {
+                const favBtn = item.querySelector('.fav-btn');
+                favBtn.addEventListener('click', (e) => toggleFavorite(ch.url, e));
+
+                channelListEl.appendChild(item);
+            });
+
+            if (filtered.length > limit) {
+                const note = document.createElement('div');
+                note.style.cssText = 'text-align:center; padding: 10px; font-size: 0.8rem; color: var(--text-sub);';
+                note.textContent = `แสดง ${limit} ช่องแรก จากทั้งหมด ${filtered.length.toLocaleString()} ช่อง (พิมพ์ค้นหาเพื่อหาช่องที่ต้องการ)`;
+                channelListEl.appendChild(note);
+            }
+        }
+
+        // Update Player Heart Icon
+        function updatePlayerFavBtn() {
+            if (!currentPlayingChannel) {
+                playerFavBtn.style.display = 'none';
+                return;
+            }
+            playerFavBtn.style.display = 'block';
+            const isFav = favorites.has(currentPlayingChannel.url);
+            playerFavBtn.className = `player-fav-btn ${isFav ? 'active' : ''}`;
+            playerFavBtn.innerHTML = `<i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+        }
+
+        // Stream Player Function
+        function playStream(channel, useProxy = false) {
+            currentPlayingChannel = channel;
+            statusMessageEl.style.display = 'none';
+            currentTitleEl.textContent = channel.name;
+            
+            if (channel.logo) {
+                currentLogoEl.src = channel.logo;
+                currentLogoEl.style.display = 'block';
+            } else {
+                currentLogoEl.style.display = 'none';
+            }
+
+            updatePlayerFavBtn();
+
+            let streamUrl = useProxy ? CORS_PROXY + encodeURIComponent(channel.url) : channel.url;
+
+            if (Hls.isSupported()) {
+                if (hls) {
+                    hls.destroy();
+                }
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    manifestLoadingTimeOut: 8000
+                });
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                    video.play().catch(e => console.log('Autoplay blocked:', e));
+                });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                alert("ไม่สามารถเล่นช่องนี้ได้: สัญญาณต้นทางเสีย หรือติดข้อจำกัดความปลอดภัย");
-                                hls.destroy();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                hls.recoverMediaError();
-                                break;
-                            default:
-                                hls.destroy();
-                                break;
+                        if (!useProxy) {
+                            console.log("Direct play failed, trying via Proxy...");
+                            playStream(channel, true);
+                        } else {
+                            statusMessageEl.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#e50914;"></i> สัญญาณช่องนี้ไม่พร้อมใช้งาน หรือล็อกโซนรับชม (Geo-blocked)`;
+                            statusMessageEl.style.display = 'flex';
                         }
                     }
                 });
+
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = proxiedUrl;
-                video.play();
+                // Safari / iOS Native HLS
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', function () {
+                    video.play();
+                });
+                video.onerror = function() {
+                    if(!useProxy) {
+                        playStream(channel, true);
+                    } else {
+                        statusMessageEl.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#e50914;"></i> ไม่สามารถเล่นสัญญาณช่องนี้ได้`;
+                        statusMessageEl.style.display = 'flex';
+                    }
+                };
             }
         }
 
-        // 6. การโหลดไฟล์ออนไลน์/ในเครื่อง
-        async function loadFromUrl() {
-            const url = document.getElementById('m3uUrl').value.trim();
-            if (!url) return alert('กรุณาระบุ URL ของไฟล์ .m3u');
-
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลได้');
-                const text = await res.text();
-                allChannels = parseM3U(text);
-                renderPlaylist();
-            } catch (err) {
-                alert('เกิดข้อผิดพลาดในการโหลด URL: ' + err.message);
+        // Event Listeners
+        loadUrlBtn.addEventListener('click', () => {
+            const customUrl = m3uUrlInput.value.trim();
+            if (customUrl) {
+                fetchPlaylist(customUrl);
             }
-        }
+        });
 
-        function loadFromFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        m3uUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const customUrl = m3uUrlInput.value.trim();
+                if (customUrl) {
+                    fetchPlaylist(customUrl);
+                }
+            }
+        });
 
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                allChannels = parseM3U(evt.target.result);
-                renderPlaylist();
-            };
-            reader.readAsText(file);
-        }
+        resetDefaultBtn.addEventListener('click', () => {
+            m3uUrlInput.value = DEFAULT_M3U_URL;
+            fetchPlaylist(DEFAULT_M3U_URL);
+        });
 
-        // โหลดหน้าครั้งแรก ถ้ามีช่องโปรดค้างไว้ ให้กดสลับไปหน้าช่องโปรดได้ทันที
-        renderPlaylist();
+        searchInput.addEventListener('input', (e) => {
+            renderChannels(e.target.value, categorySelect.value);
+        });
+
+        categorySelect.addEventListener('change', (e) => {
+            renderChannels(searchInput.value, e.target.value);
+        });
+
+        playerFavBtn.addEventListener('click', () => {
+            if (currentPlayingChannel) {
+                toggleFavorite(currentPlayingChannel.url);
+            }
+        });
+
+        // App Init
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('iptv_last_url') || DEFAULT_M3U_URL;
+            m3uUrlInput.value = savedUrl;
+            fetchPlaylist(savedUrl);
+        });
     </script>
 </body>
 </html>
